@@ -1,4 +1,4 @@
-import { Plugin } from "@opencode-ai/plugin/tui"
+import { Plugin } from "@opencode/plugin/tui"
 import { Duration, Effect } from "effect"
 import type { Wait } from "./domain.ts"
 import * as WaitDuration from "./duration.ts"
@@ -170,8 +170,8 @@ export default Plugin.define({
       })
 
       const colors = {
-        text: ctx.theme.text.default,
-        subdued: ctx.theme.text.subdued,
+        text: ctx.theme.text.base,
+        subdued: ctx.theme.text.muted,
         activeText: ctx.theme.text.action.primary.focused,
         activeBg: ctx.theme.background.action.primary.focused,
       }
@@ -359,8 +359,8 @@ export default Plugin.define({
     // Mirrors the pending waits into host-owned reactive state. `storage.memory`
     // returns the TUI's own store, so reading it in a component tracks
     // correctly without this plugin importing solid-js itself.
-    const [mirror, setMirror] = ctx.storage.memory<{ rows: Row[] }>("sidebar", {
-      initial: { rows: [] },
+    const [mirror, setMirror] = ctx.storage.memory<{ rows: Row[]; expanded: boolean }>("sidebar", {
+      initial: { rows: [], expanded: true },
     })
 
     const refresh = async () => {
@@ -385,8 +385,19 @@ export default Plugin.define({
       append: "sidebar.content",
       render: () =>
         Waits({
-          title: `Waits (${mirror.rows.length})`,
-          rows: mirror.rows,
+          get title() {
+            return `Waits (${mirror.rows.length})`
+          },
+          get rows() {
+            return mirror.rows
+          },
+          get expanded() {
+            return mirror.expanded
+          },
+          onToggle: () =>
+            setMirror((draft) => {
+              draft.expanded = !draft.expanded
+            }),
           onOpen: (id) => void openActions(id),
         }),
     })

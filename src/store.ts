@@ -1,6 +1,6 @@
 import { homedir } from "node:os"
 import { join } from "node:path"
-import type { Session } from "@opencode-ai/schema/session"
+import type { Session } from "@opencode/schema/session"
 import { Duration, Effect, Schema } from "effect"
 import type { Wait, WaitID } from "./domain.ts"
 

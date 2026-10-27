@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { Session } from "@opencode-ai/schema/session"
-import { Tool } from "@opencode-ai/schema/tool"
+import { Session } from "@opencode/schema/session"
+import { Tool } from "@opencode/schema/tool"
 import { Cause, Duration, Effect, Exit, Option } from "effect"
 import type { Wait } from "../src/domain.ts"
 import type { ScheduleInput, Interface as Scheduler } from "../src/supervisor.ts"
@@ -131,8 +131,8 @@ describe("Tools.all", () => {
     for (const tool of tools) {
       const input: unknown = tool.input
 
-      // effect 4.0.0-beta.107 made Struct schemas callable, so typeof is
-      // "function"; the fields property is what identifies a Struct.
+      // Effect 4 Struct schemas are callable, so typeof is "function"; the
+      // fields property is what identifies a Struct.
       if (
         (typeof input === "object" || typeof input === "function") &&
         input !== null &&

@@ -23,27 +23,32 @@ export const Waits = (props: {
   readonly rows: ReadonlyArray<Row>
   readonly title: string
   readonly onOpen: (id: string) => void
+  readonly expanded: boolean
+  readonly onToggle: () => void
 }): JSX.Element => (
   <box flexDirection="column" paddingTop={1}>
-    <text fg={accent}>{props.title}</text>
-    {props.rows.map((row) => (
-      <box
-        flexDirection="row"
-        justifyContent="space-between"
-        // On release, not press: opening on mousedown leaves the click's
-        // mouseup to land outside the new dialog, which closes it instantly.
-        onMouseUp={() => props.onOpen(row.id)}
-      >
-        {/* Not selectable: a click on selectable text starts a selection, and
+    <box flexDirection="row" onMouseUp={props.onToggle}>
+      <text selectable={false} fg={accent}>{`${props.expanded ? "▾" : "▸"} ${props.title}`}</text>
+    </box>
+    {props.expanded &&
+      props.rows.map((row) => (
+        <box
+          flexDirection="row"
+          justifyContent="space-between"
+          // On release, not press: opening on mousedown leaves the click's
+          // mouseup to land outside the new dialog, which closes it instantly.
+          onMouseUp={() => props.onOpen(row.id)}
+        >
+          {/* Not selectable: a click on selectable text starts a selection, and
             the dialog backdrop swallows the next click whenever a selection
             exists, so opening and closing would each need two clicks. */}
-        <text selectable={false} fg={row.mine ? normal : muted}>
-          {row.id} {row.prompt}
-        </text>
-        <text selectable={false} fg={muted}>
-          {row.countdown}
-        </text>
-      </box>
-    ))}
+          <text selectable={false} fg={row.mine ? normal : muted}>
+            {row.id} {row.prompt}
+          </text>
+          <text selectable={false} fg={muted}>
+            {row.countdown}
+          </text>
+        </box>
+      ))}
   </box>
 )

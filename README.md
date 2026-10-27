@@ -1,8 +1,8 @@
-# opencode2-waits
+# opencode-waits
 
-[![CI](https://github.com/davidprokopec/opencode2-waits/actions/workflows/ci.yml/badge.svg)](https://github.com/davidprokopec/opencode2-waits/actions/workflows/ci.yml)
-[![npm beta](https://img.shields.io/npm/v/opencode2-waits/beta?label=npm%20beta)](https://www.npmjs.com/package/opencode2-waits)
-[![license](https://img.shields.io/npm/l/opencode2-waits)](LICENSE)
+[![CI](https://github.com/davidprokopec/opencode-waits/actions/workflows/ci.yml/badge.svg)](https://github.com/davidprokopec/opencode-waits/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/opencode-waits)](https://www.npmjs.com/package/opencode-waits)
+[![license](https://img.shields.io/npm/l/opencode-waits)](LICENSE)
 
 Defer a prompt in [OpenCode V2](https://opencode.ai/v2/docs/). Say what you want
 and when you want it, and OpenCode sends it to itself later.
@@ -18,24 +18,26 @@ tokens are burned while the timer is pending. When the delay elapses the plugin
 submits the prompt text into the same session as an ordinary user prompt, and
 OpenCode acts on it exactly as if you had typed it yourself.
 
-This package replaces the previously published `opencode-waits`. Existing
-pending waits remain compatible and continue using the original data directory.
+Now that OpenCode V2 is official, this plugin is published as `opencode-waits`
+again. It was published as `opencode2-waits` during the V2 preview; new
+releases use `opencode-waits`. To migrate, replace `opencode2-waits` (or
+`opencode2-waits@beta`) with `opencode-waits` in both `opencode.json(c)` and
+`cli.json`.
+Existing pending waits remain compatible and continue using the original data
+directory. The source lives in the
+[`davidprokopec/opencode-waits`](https://github.com/davidprokopec/opencode-waits)
+repository.
 
 ## Install
 
-Version 0.2.1 targets OpenCode V2 `0.0.0-beta-19242`. Its plugin SDK, Effect,
-and OpenTUI versions are pinned together. Older plugin versions can fail to
-load after an OpenCode upgrade with `scope.state.finalizers.set`; update the
-plugin rather than changing credentials or deleting pending waits.
-
 The plugin has two halves and needs an entry in **two** config files. The TUI
-half provides the commands; the server half owns the timers so a wait still
-fires once the TUI is closed.
+half provides model-free command handlers; the server half exposes the commands
+to every client and owns the timers so a wait still fires once the TUI is closed.
 
 ```jsonc
 // opencode.json(c) — the server half
 {
-  "plugins": ["opencode2-waits@beta"],
+  "plugins": ["opencode-waits"],
 }
 ```
 
@@ -44,7 +46,7 @@ fires once the TUI is closed.
 // The package name only: the TUI resolves its ./tui entrypoint itself, and a
 // /tui suffix would be read as part of the npm spec and fail to install.
 {
-  "plugins": ["opencode2-waits@beta"],
+  "plugins": ["opencode-waits"],
 }
 ```
 
@@ -54,7 +56,7 @@ With options:
 {
   "plugins": [
     {
-      "package": "opencode2-waits@beta",
+      "package": "opencode-waits",
       "options": {
         "delivery": "queue",
       },
@@ -69,16 +71,16 @@ With options:
 
 ### Compatibility
 
-The V2 plugin API is beta. This release is built and verified against
-`@opencode-ai/plugin@0.0.0-beta-19242` (`opencode2 --version` → `v0.0.0-beta-19242`).
-If your OpenCode is on a different beta build, check for a matching release of
-this plugin.
+This release is built and verified against the released
+`@opencode/plugin@2.2.0` API and OpenCode `2.2.0` (OpenTUI `0.7.0`, Effect `4.0.1`).
 
-Always install with the explicit `@beta` tag. npm assigned `latest` during the
-one-time package bootstrap, but the release workflow never publishes or moves
-that tag while OpenCode V2 remains beta.
+Releases are published to npm `latest`, so the plain package name installs
+the current stable version.
 
 ## Commands
+
+The TUI sidebar shows pending waits in an expanded Waits section. Click its
+header to collapse or expand it; click a wait to open its actions.
 
 | Command                 | Effect                                                     |
 | ----------------------- | ---------------------------------------------------------- |
@@ -141,22 +143,13 @@ Timers cannot live there, though: they would die when you close the TUI. So the
 TUI half only records the wait to disk, and the **server** half — running in the
 background service — owns the timers and delivers the prompt.
 
-The plugin can also expose `wait_schedule`, `wait_list` and `wait_cancel` as
-tools so the agent can schedule work itself. Enabling them also registers
-`/wait`, `/wait-list` and `/wait-cancel` as server-side commands — the fallback
-for clients without a plugin runtime, such as the **web and desktop apps**.
-There the command is a prompt template that makes the agent call the tool, so
-it costs one model turn; in the TUI the plugin's own model-free commands
-intercept first, so nothing changes.
-
-Both are **off by default**, since every exposed tool costs schema tokens in
-every request. In the TUI this option also doubles the wait entries in slash
-completion — the client-side command and the server fallback share names; the
-client one always wins on submit:
-
-```jsonc
-{ "package": "opencode2-waits", "options": { "tools": true } }
-```
+The server half always exposes `wait_schedule`, `wait_list` and `wait_cancel` as
+tools and registers `/wait`, `/wait-list` and `/wait-cancel` as server-side
+commands. This makes them discoverable in clients that do not load the TUI
+half, such as the **web and desktop apps**. There the command makes the agent
+call the tool, so it costs one model turn. In the TUI the
+plugin's own model-free commands intercept first, so scheduling still costs no
+model call there.
 
 ## Development
 
@@ -171,7 +164,7 @@ To run it against a local checkout, add a local plugin directory with an
 `index.ts` that re-exports the checkout's server entrypoint:
 
 ```ts
-export { default } from "/absolute/path/to/opencode2-waits/src/index.ts"
+export { default } from "/absolute/path/to/opencode-waits/src/index.ts"
 ```
 
 Then configure that local plugin directory:

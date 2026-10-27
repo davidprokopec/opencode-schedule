@@ -13,20 +13,14 @@ export type Delivery = typeof Delivery.Type
 export interface Options extends Schema.Schema.Type<typeof Options> {}
 export const Options = Schema.Struct({
   delivery: Schema.optional(Delivery),
-  /** Exposes wait_schedule/wait_list/wait_cancel to the model. */
-  tools: Schema.optional(Schema.Boolean),
 })
 
 export const defaults = {
   delivery: "queue",
-  // Off by default: the slash commands never need them, and every exposed
-  // tool costs schema tokens in every request.
-  tools: false,
 } as const satisfies Required<Options>
 
 export interface Resolved {
   readonly delivery: Delivery
-  readonly tools: boolean
 }
 
 const decodeOption = Schema.decodeUnknownOption(Options)
@@ -45,13 +39,12 @@ export const resolve = (input: unknown): Effect.Effect<Resolved> =>
     const decoded = decodeOption(input ?? {})
     if (Option.isNone(decoded)) {
       yield* Effect.logWarning(
-        "opencode2-waits: ignoring invalid plugin options, using defaults",
+        "opencode-waits: ignoring invalid plugin options, using defaults",
         input,
       )
-      return { delivery: defaults.delivery, tools: defaults.tools }
+      return { delivery: defaults.delivery }
     }
     return {
       delivery: decoded.value.delivery ?? defaults.delivery,
-      tools: decoded.value.tools ?? defaults.tools,
     }
   })
