@@ -50,6 +50,7 @@ jobs:
           bun run typecheck
           bun run lint
           bun test
+          bun run build
 
       - name: Generate development version
         if: github.ref == 'refs/heads/develop'
