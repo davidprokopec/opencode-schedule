@@ -21,8 +21,8 @@ OpenCode acts on it exactly as if you had typed it yourself.
 Now that OpenCode V2 is official, this plugin is published as `opencode-waits`
 again. It was published as `opencode2-waits` during the V2 preview; new
 releases use `opencode-waits`. To migrate, replace `opencode2-waits` (or
-`opencode2-waits@beta`) with `opencode-waits` in both `opencode.json(c)` and
-`cli.json`.
+`opencode2-waits@beta`) with `opencode-waits` in `opencode.json(c)` and remove
+any old waits entry from `cli.json`.
 Existing pending waits remain compatible and continue using the original data
 directory. The source lives in the
 [`davidprokopec/opencode-waits`](https://github.com/davidprokopec/opencode-waits)
@@ -30,25 +30,25 @@ repository.
 
 ## Install
 
-The plugin has two halves and needs an entry in **two** config files. The TUI
-half provides model-free command handlers; the server half exposes the commands
-to every client and owns the timers so a wait still fires once the TUI is closed.
+Install globally with OpenCode's plugin manager:
+
+```sh
+opencode plugin add opencode-waits
+```
+
+Or add the package to `plugins` in `opencode.json(c)`. One entry loads the
+server and TUI parts. Desktop loads the experimental GUI part from the global
+configuration:
 
 ```jsonc
-// opencode.json(c) — the server half
+// ~/.config/opencode/opencode.json(c)
 {
   "plugins": ["opencode-waits"],
 }
 ```
 
-```jsonc
-// cli.json — the TUI half, which provides /wait
-// The package name only: the TUI resolves its ./tui entrypoint itself, and a
-// /tui suffix would be read as part of the npm spec and fail to install.
-{
-  "plugins": ["opencode-waits"],
-}
-```
+No separate waits entry in `cli.json` is needed. The server owns the timers,
+so closing the TUI or Desktop window does not cancel pending waits.
 
 With options:
 
@@ -81,6 +81,26 @@ the current stable version.
 
 The TUI sidebar shows pending waits in an expanded Waits section. Click its
 header to collapse or expand it; click a wait to open its actions.
+
+### Desktop (experimental)
+
+Open a session, then choose **Open Waits** from the command palette or use
+`/wait-list` to open the Waits side panel. Schedule a prompt with a delay,
+view pending waits and their countdowns, or cancel one wait or all waits in
+the current session. `/wait` and `/wait-cancel` also run locally without a
+model call.
+
+The GUI API is experimental and targets OpenCode Desktop 2.2.0. Browser/web-app
+plugin loading has not been verified. The Desktop panel currently supports
+scheduling, listing and cancellation; the TUI's edit, reschedule and send-now
+actions are not part of this GUI version.
+
+OpenCode 2.2.0 may show both server fallback and GUI entries in slash
+suggestions. Typing `/wait`, `/wait-list` or `/wait-cancel` and submitting
+directly uses the local GUI handler; the server entries remain available for
+clients without GUI support.
+
+### Slash commands
 
 | Command                 | Effect                                                     |
 | ----------------------- | ---------------------------------------------------------- |
@@ -129,7 +149,7 @@ the session as an ordinary message. The plugin only re-arms — after 5m, 15m an
 busy with a conflicting operation. If the target session no longer exists, the
 wait is dropped.
 
-## How it works, and why it is split in two
+## How it works
 
 A slash command defined by a *server* plugin is only a prompt template. Running
 one submits a prompt and schedules model execution — so it fails exactly when
@@ -137,7 +157,8 @@ you are rate limited and most want to defer work.
 
 A **TUI** slash command does not. The prompt matches `/wait …` and calls the
 plugin before any model dispatch, so scheduling costs no model call at all. That
-is why the trigger lives in the TUI half.
+is why the terminal trigger lives in the TUI part. Desktop commands call the
+server's typed RPC directly, also without submitting a model prompt.
 
 Timers cannot live there, though: they would die when you close the TUI. So the
 TUI half only records the wait to disk, and the **server** half — running in the
@@ -145,11 +166,9 @@ background service — owns the timers and delivers the prompt.
 
 The server half always exposes `wait_schedule`, `wait_list` and `wait_cancel` as
 tools and registers `/wait`, `/wait-list` and `/wait-cancel` as server-side
-commands. This makes them discoverable in clients that do not load the TUI
-half, such as the **web and desktop apps**. There the command makes the agent
-call the tool, so it costs one model turn. In the TUI the
-plugin's own model-free commands intercept first, so scheduling still costs no
-model call there.
+commands. Clients without the TUI or GUI part can use these server commands;
+they ask the agent to call the tool and cost one model turn. The TUI and
+Desktop GUI parts provide their own model-free command handlers instead.
 
 ## Development
 
@@ -157,26 +176,20 @@ Requires [Bun](https://bun.sh).
 
 ```sh
 bun install
-bun run check   # typecheck + lint + test
+bun run check   # typecheck + lint + test + GUI bundle build
 ```
 
-To run it against a local checkout, add a local plugin directory with an
-`index.ts` that re-exports the checkout's server entrypoint:
-
-```ts
-export { default } from "/absolute/path/to/opencode-waits/src/index.ts"
-```
-
-Then configure that local plugin directory:
+To run it against a local checkout, install dependencies and build the GUI
+bundle first, then configure the package directory:
 
 ```jsonc
 {
-  "plugins": ["/absolute/path/to/local-plugin"],
+  "plugins": ["/absolute/path/to/opencode-waits"],
 }
 ```
 
-OpenCode does not install dependencies for local plugin paths, so `bun install`
-in this directory first.
+OpenCode does not install dependencies or build the GUI for local plugin
+paths. Rebuild with `bun run build` after changing GUI code.
 
 ## License
 
