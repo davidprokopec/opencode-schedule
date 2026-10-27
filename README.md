@@ -160,11 +160,18 @@ bun install
 bun run check   # typecheck + lint + test
 ```
 
-To run it against a local checkout, point a config entry at the file:
+To run it against a local checkout, add a local plugin directory with an
+`index.ts` that re-exports the checkout's server entrypoint:
+
+```ts
+export { default } from "/absolute/path/to/opencode-waits/src/index.ts"
+```
+
+Then configure that local plugin directory:
 
 ```jsonc
 {
-  "plugins": ["/absolute/path/to/opencode-waits/src/index.ts"],
+  "plugins": ["/absolute/path/to/local-plugin"],
 }
 ```
 
