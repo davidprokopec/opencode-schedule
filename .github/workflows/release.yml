@@ -1,7 +1,8 @@
 name: Release
 
-# Tags publish reviewed betas. Develop publishes unique snapshots once the
-# repository variable NPM_PUBLISH_ENABLED is set to true after OIDC setup.
+# Tags publish reviewed stable releases to npm latest. Develop publishes unique
+# snapshots once the repository variable NPM_PUBLISH_ENABLED is set to true
+# after OIDC setup.
 on:
   push:
     branches: [develop]
@@ -84,9 +85,9 @@ jobs:
       # No NODE_AUTH_TOKEN: authentication is the OIDC exchange, and provenance
       # is generated automatically when publishing this way.
       #
-      - name: Publish beta
+      - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
-        run: npm publish --tag beta
+        run: npm publish --tag latest
 
       - name: Publish development snapshot
         if: github.ref == 'refs/heads/develop'

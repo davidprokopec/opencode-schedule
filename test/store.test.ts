@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Session } from "@opencode-ai/schema/session"
+import { Session } from "@opencode/schema/session"
 import { Duration, Effect } from "effect"
 import type { Wait } from "../src/domain.ts"
 import * as Store from "../src/store.ts"

@@ -1,4 +1,4 @@
-import type { Session } from "@opencode-ai/schema/session"
+import type { Session } from "@opencode/schema/session"
 import type { Duration } from "effect"
 
 /**
