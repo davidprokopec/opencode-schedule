@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { Session } from "@opencode-ai/schema/session"
-import { Skill } from "@opencode-ai/schema/skill"
+import { Session } from "@opencode/schema/session"
+import { Skill } from "@opencode/schema/skill"
 import { Cause, Effect, Exit, Schema } from "effect"
 import * as Commands from "../src/commands.ts"
 

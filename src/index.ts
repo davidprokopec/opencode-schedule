@@ -1,5 +1,5 @@
 import { watch } from "node:fs"
-import { Plugin } from "@opencode-ai/plugin/effect"
+import { Plugin } from "@opencode/plugin/effect"
 import { Context, Effect, Layer } from "effect"
 import * as Commands from "./commands.ts"
 import * as Delivery from "./delivery.ts"
@@ -50,20 +50,18 @@ export default Plugin.define({
         (watcher) => Effect.sync(() => watcher?.close()),
       )
 
-      // The model-facing surface doubles as the fallback for clients without
-      // a plugin runtime, such as the web and desktop apps: the templates make
-      // the agent call the tools, costing one model turn. The TUI's own slash
-      // commands run client side before submission, so they win there.
-      if (options.tools) {
-        yield* ctx.tool.transform((tools) => {
-          for (const tool of Tools.all(supervisor)) tools.add(tool)
-        })
-        yield* ctx.command.transform((commands) => {
-          for (const definition of Commands.definitions) {
-            commands.add(Commands.command(definition, ctx.session))
-          }
-        })
-      }
+      // Register server commands so clients that do not load the TUI half, such as
+      // the web and desktop apps, discover them too. Their templates make the
+      // agent call these tools, costing one model turn. The TUI's own slash
+      // commands run client side before submission, so they still win there.
+      yield* ctx.tool.transform((tools) => {
+        for (const tool of Tools.all(supervisor)) tools.add(tool)
+      })
+      yield* ctx.command.transform((commands) => {
+        for (const definition of Commands.definitions) {
+          commands.add(Commands.command(definition, ctx.session))
+        }
+      })
     }),
 })
 

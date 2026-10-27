@@ -35,8 +35,8 @@ either protected branch are disabled.
 ## Releases
 
 - Every eligible push to `develop` publishes a unique npm `dev` snapshot.
-- A version tag on `master` publishes the reviewed npm `beta` release.
-- Nothing publishes to npm `latest` while OpenCode V2 remains beta.
+- A version tag on `master` publishes the reviewed release to npm `latest`.
+- `dev` snapshots never move `latest`.
 
 Maintainers prepare a reviewed release by merging `develop` into `master`, then
 creating and pushing the version tag from `master`.

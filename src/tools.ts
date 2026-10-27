@@ -1,4 +1,4 @@
-import { Tool } from "@opencode-ai/schema/tool"
+import { Tool } from "@opencode/schema/tool"
 import { Clock, Duration, Effect, Option, Schema } from "effect"
 import type { Wait } from "./domain.ts"
 import * as WaitDuration from "./duration.ts"

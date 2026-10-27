@@ -1,6 +1,6 @@
-import type { PromptInput } from "@opencode-ai/schema/prompt-input"
-import type { Session } from "@opencode-ai/schema/session"
-import type { SessionInbox } from "@opencode-ai/schema/session-inbox"
+import type { PromptInput } from "@opencode/schema/prompt-input"
+import type { Session } from "@opencode/schema/session"
+import type { SessionInbox } from "@opencode/schema/session-inbox"
 import { Effect } from "effect"
 
 export interface Definition {
@@ -10,8 +10,8 @@ export interface Definition {
 }
 
 /**
- * The fallback trigger for clients without a plugin runtime — the web and
- * desktop apps only list plugins in settings, they cannot run one. Each of
+ * The fallback trigger for clients that do not load the TUI half, such as
+ * the web and desktop apps. Each of
  * these submits its template as a prompt, so it costs one model turn: the
  * template's only job is to make the agent call the matching tool once, with
  * the argument text passed straight through. In the TUI the client-side slash
