@@ -116,7 +116,10 @@ const schedule = (input: { session: string; prompt: string; inMs: number }): Pro
     }),
   )
 
-const files = () => readdir(join(directory, "opencode-waits", "waits")).catch(() => [] as string[])
+const files = () =>
+  readdir(join(directory, "opencode-waits", "waits"))
+    .then((names) => names.sort())
+    .catch(() => [] as string[])
 
 beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), "waits-sidebar-"))
