@@ -3,8 +3,10 @@ import { Plugin } from "@opencode/plugin/effect"
 import { Context, Effect, Layer } from "effect"
 import * as Commands from "./commands.ts"
 import * as Delivery from "./delivery.ts"
+import * as GuiServer from "./gui-server.ts"
 import * as Node from "./node.ts"
 import * as Options from "./options.ts"
+import { WaitsRpc } from "./rpc.ts"
 import * as Store from "./store.ts"
 import * as Supervisor from "./supervisor.ts"
 import * as Tools from "./tools.ts"
@@ -62,6 +64,10 @@ export default Plugin.define({
           commands.add(Commands.command(definition, ctx.session))
         }
       })
+
+      // Lets the desktop app's Waits panel schedule, list and cancel without a
+      // model turn.
+      yield* GuiServer.register(ctx.rpc, GuiServer.make(supervisor, probe))
     }),
 })
 
@@ -69,4 +75,4 @@ class SupervisorTag extends Context.Service<SupervisorTag, Supervisor.Interface>
   "opencode2-waits/Supervisor",
 ) {}
 
-export { Commands, Delivery, Options, Store, Supervisor, Tools }
+export { Commands, Delivery, GuiServer, Options, Store, Supervisor, Tools, WaitsRpc }

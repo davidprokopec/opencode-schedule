@@ -47,7 +47,15 @@ jobs:
       - name: Test
         run: bun test
 
-      # The published tarball is TypeScript source with no build step, so
-      # nothing else would catch a files/exports mistake before a release.
+      - name: Build GUI
+        run: bun run build
+
       - name: Check package contents
-        run: npm pack --dry-run
+        run: |
+          npm pack --dry-run --json | node -e '
+            const [pack] = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+            if (!pack.files.some(file => file.path === "dist/gui-experimental.cjs")) {
+              throw new Error("GUI bundle missing from package");
+            }
+            console.log(pack.filename + ": GUI bundle included (" + pack.files.length + " files)");
+          '
