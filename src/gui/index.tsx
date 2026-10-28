@@ -1,9 +1,18 @@
 /** @jsxImportSource solid-js */
-import { type Panel as GuiPanel, Panel, type PanelProps, Plugin, Style } from "@opencode/plugin/gui"
+import {
+  type MenuItem as GuiMenuItem,
+  type Panel as GuiPanel,
+  MenuItem,
+  Panel,
+  type PanelProps,
+  Plugin,
+  Slot,
+  Style,
+} from "@opencode/plugin/gui"
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js"
-import { registerWaitCommands } from "./gui-commands.ts"
-import { createSessionScope, errorMessage, remaining } from "./gui-utils.ts"
-import { type WaitRow, WaitsRpc } from "./rpc.ts"
+import { type WaitRow, WaitsRpc } from "../shared/rpc.ts"
+import { registerWaitCommands } from "./commands.ts"
+import { createSessionScope, errorMessage, remaining } from "./utils.ts"
 
 function WaitsPanel(props: PanelProps) {
   const [rows, setRows] = createSignal<readonly WaitRow[]>([])
@@ -45,7 +54,7 @@ function WaitsPanel(props: PanelProps) {
       }
     } catch (cause) {
       if (scope.isCurrent(target.key, current) && !mutationFailed)
-        setError(errorMessage(cause, "Could not load waits."))
+        setError(errorMessage(cause, "Could not load schedules."))
     } finally {
       if (request === requestGeneration && scope.isCurrent(target.key, current)) {
         requestKey = undefined
@@ -97,7 +106,7 @@ function WaitsPanel(props: PanelProps) {
     } catch (cause) {
       if (scope.isCurrent(target.key, revision)) {
         mutationFailed = true
-        setError(errorMessage(cause, "Could not schedule this wait."))
+        setError(errorMessage(cause, "Could not schedule this prompt."))
       }
     } finally {
       if (scope.isCurrent(target.key, revision)) setBusy(false)
@@ -117,7 +126,7 @@ function WaitsPanel(props: PanelProps) {
     } catch (cause) {
       if (scope.isCurrent(target.key, revision)) {
         mutationFailed = true
-        setError(errorMessage(cause, "Could not cancel this wait."))
+        setError(errorMessage(cause, "Could not cancel this schedule."))
       }
     } finally {
       if (scope.isCurrent(target.key, revision)) setBusy(false)
@@ -137,26 +146,26 @@ function WaitsPanel(props: PanelProps) {
     } catch (cause) {
       if (scope.isCurrent(target.key, revision)) {
         mutationFailed = true
-        setError(errorMessage(cause, "Could not cancel waits."))
+        setError(errorMessage(cause, "Could not cancel schedules."))
       }
     } finally {
       if (scope.isCurrent(target.key, revision)) setBusy(false)
     }
   }
   return (
-    <section class="waits-panel" aria-label="Scheduled waits">
+    <section class="waits-panel" aria-label="Scheduled prompts">
       <header class="waits-header">
         <div>
-          <p class="waits-eyebrow">FOLLOW-UP QUEUE</p>
+          <p class="waits-eyebrow">SCHEDULED PROMPTS</p>
           <h2>
-            Waits <span>{rows().length}</span>
+            Schedules <span>{rows().length}</span>
           </h2>
         </div>
         <button
           type="button"
           class="waits-refresh"
           onClick={() => void refresh(active)}
-          aria-label="Refresh waits"
+          aria-label="Refresh schedules"
           disabled={loading()}
         >
           ↻
@@ -186,7 +195,7 @@ function WaitsPanel(props: PanelProps) {
           type="submit"
           disabled={busy() || !duration().trim() || !prompt().trim()}
         >
-          {busy() ? "Saving…" : "Schedule wait"}
+          {busy() ? "Saving…" : "Schedule prompt"}
           <span aria-hidden="true">↗</span>
         </button>
       </form>
@@ -205,13 +214,13 @@ function WaitsPanel(props: PanelProps) {
       </Show>
       <Show when={loading()}>
         <p class="waits-status" role="status">
-          Loading scheduled waits…
+          Loading schedules…
         </p>
       </Show>
       <Show when={!loading() && rows().length === 0 && !error()}>
         <div class="waits-empty">
           <span aria-hidden="true">◷</span>
-          <strong>Nothing waiting</strong>
+          <strong>No scheduled prompts</strong>
           <p>Schedule a prompt above and it will appear here.</p>
         </div>
       </Show>
@@ -226,7 +235,7 @@ function WaitsPanel(props: PanelProps) {
                     type="button"
                     onClick={() => void cancel(row.id)}
                     disabled={busy()}
-                    aria-label={`Cancel wait ${row.id}`}
+                    aria-label={`Cancel schedule ${row.id}`}
                   >
                     Cancel
                   </button>
@@ -245,17 +254,17 @@ function WaitsPanel(props: PanelProps) {
 export default Plugin.define({
   i18n: {
     en: {
-      "command.open": "Open Waits",
-      "command.wait": "Schedule a wait",
-      "command.list": "Open scheduled waits",
-      "command.cancel": "Cancel a wait",
+      "command.open": "Open Schedules",
+      "command.wait": "Schedule a prompt",
+      "command.list": "Open scheduled prompts",
+      "command.cancel": "Cancel a scheduled prompt",
     },
   },
   setup(ctx) {
     const tab = {
       id: "main",
       get title() {
-        return "Waits"
+        return "Schedules"
       },
       closable: "compact" as const,
       fallback: true,
@@ -271,7 +280,7 @@ export default Plugin.define({
         region: "side",
         mobile: {
           get title() {
-            return "Waits"
+            return "Schedules"
           },
           order: 45,
           kind: "menu",
@@ -281,6 +290,39 @@ export default Plugin.define({
         render: (props) => <WaitsPanel {...props} />,
       }),
     )
+    ctx.add(Slot, {
+      at: "session.panel.end",
+      render: (input) => (
+        <button
+          type="button"
+          title="Open Schedules"
+          aria-label="Open Schedules"
+          onClick={() => ctx.layout.open(`${ctx.id}:main`, input.session)}
+        >
+          ◷ Schedules
+        </button>
+      ),
+    })
+    ctx.add(MenuItem, (): GuiMenuItem => {
+      const session = ctx.sessions.current()
+      return {
+        menu: "session.panel",
+        id: "schedules",
+        title: "Schedules",
+        icon: "outline-rotate-clockwise",
+        order: 45,
+        opened: !!session && ctx.layout.state(`${ctx.id}:main`, session) !== "closed",
+        run: () => {
+          const target = ctx.sessions.current()
+          if (target) ctx.layout.open(`${ctx.id}:main`, target)
+          else
+            ctx.toast.show({
+              title: "No session open",
+              description: "Open a session to view scheduled prompts.",
+            })
+        },
+      }
+    })
     registerWaitCommands(ctx)
   },
 })

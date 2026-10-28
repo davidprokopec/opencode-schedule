@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "opencode-waits",
+      "name": "opencode-schedule",
       "dependencies": {
         "@opencode/plugin": "2.2.0",
         "@opencode/schema": "2.2.0",

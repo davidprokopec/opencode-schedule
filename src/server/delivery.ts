@@ -1,6 +1,6 @@
 import type { Session } from "@opencode/schema/session"
 import { Context, Effect, Layer } from "effect"
-import type { Wait } from "./domain.ts"
+import type { Wait } from "../shared/domain.ts"
 import type { Delivery as Mode, Resolved } from "./options.ts"
 
 /**
@@ -46,7 +46,7 @@ export const layer = (session: SessionPort, options: Resolved): Layer.Layer<Serv
             // Reported rather than propagated: the caller decides whether to
             // re-arm, and nothing upstream of it can retry.
             Effect.catchCause((cause) =>
-              Effect.logError(`opencode-waits: failed to deliver wait ${wait.id}`, cause).pipe(
+              Effect.logError(`opencode-schedule: failed to deliver wait ${wait.id}`, cause).pipe(
                 Effect.as(false),
               ),
             ),

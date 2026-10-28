@@ -1,11 +1,11 @@
 import { Plugin } from "@opencode/plugin/tui"
 import { Duration, Effect } from "effect"
-import type { Wait } from "./domain.ts"
-import * as WaitDuration from "./duration.ts"
+import type { Wait } from "../shared/domain.ts"
+import * as WaitDuration from "../shared/duration.ts"
+import * as Node from "../shared/node.ts"
+import * as Store from "../shared/store.ts"
 import { Manager, type ManagerRow } from "./manager.tsx"
-import * as Node from "./node.ts"
 import { type Row, Waits } from "./sidebar.tsx"
-import * as Store from "./store.ts"
 
 type Action = "send" | "delete" | "edit" | "reschedule"
 
@@ -52,7 +52,7 @@ export default Plugin.define({
       Duration.format(Duration.seconds(Math.max(0, Math.round((firesAt - now) / 1000))))
 
     const fail = (message: string) =>
-      ctx.ui.toast.show({ message, variant: "error", title: "Waits" })
+      ctx.ui.toast.show({ message, variant: "error", title: "Schedules" })
 
     const schedule = async (input?: string) => {
       // The palette invokes commands with no input, so ask for it rather than
@@ -60,7 +60,7 @@ export default Plugin.define({
       let text = (input ?? "").trim()
       if (text === "") {
         const answer = await ctx.ui.dialog.prompt({
-          title: "Schedule a wait",
+          title: "Schedule a prompt",
           description: "A delay, then the prompt to send once it elapses",
           placeholder: "1hour implement this",
         })
@@ -71,7 +71,9 @@ export default Plugin.define({
 
       const split = text.indexOf(" ")
       if (split < 1) {
-        return void fail("Usage: /wait <duration> <prompt>, e.g. /wait 1hour implement this")
+        return void fail(
+          "Usage: /schedule <duration> <prompt>, e.g. /schedule 1hour implement this",
+        )
       }
 
       const parsed = await Effect.runPromise(
@@ -99,9 +101,9 @@ export default Plugin.define({
           }),
         )
         ctx.ui.toast.show({
-          title: "Waits",
+          title: "Schedules",
           variant: "success",
-          message: `Scheduled ${wait.id} in ${Duration.format(duration)}. Cancel with /wait-cancel ${wait.id}.`,
+          message: `Scheduled ${wait.id} in ${Duration.format(duration)}. Cancel with /schedule-cancel ${wait.id}.`,
         })
       } catch (cause) {
         fail(`Could not save the wait: ${cause instanceof Error ? cause.message : String(cause)}`)
@@ -179,10 +181,10 @@ export default Plugin.define({
       ctx.ui.dialog.show(
         () =>
           Manager({
-            title: `Waits (${manager.rows.length})`,
+            title: `Schedules (${manager.rows.length})`,
             rows: visible(),
             index: manager.index,
-            empty: manager.query.trim() === "" ? "No pending waits." : "No results found",
+            empty: manager.query.trim() === "" ? "No scheduled prompts." : "No results found",
             actions: [
               { title: "actions", label: "enter" },
               { title: "add", label: "ctrl+a" },
@@ -221,7 +223,7 @@ export default Plugin.define({
       if (row === undefined) return
       await run(store.remove(row.id))
       await refreshManager()
-      ctx.ui.toast.show({ title: "Waits", variant: "success", message: `Cancelled ${row.id}.` })
+      ctx.ui.toast.show({ title: "Schedules", variant: "success", message: `Cancelled ${row.id}.` })
     }
 
     /** ctrl+e: edit the highlighted wait's prompt, then return to the list. */
@@ -238,7 +240,11 @@ export default Plugin.define({
       })
       if (edited !== undefined && edited.trim() !== "") {
         await run(store.update({ ...wait, prompt: edited.trim() }))
-        ctx.ui.toast.show({ title: "Waits", variant: "success", message: `Updated ${wait.id}.` })
+        ctx.ui.toast.show({
+          title: "Schedules",
+          variant: "success",
+          message: `Updated ${wait.id}.`,
+        })
       }
       await openMenu()
     }
@@ -270,7 +276,7 @@ export default Plugin.define({
 
       const done = (message: string) => {
         ctx.ui.dialog.clear()
-        ctx.ui.toast.show({ title: "Waits", variant: "success", message })
+        ctx.ui.toast.show({ title: "Schedules", variant: "success", message })
       }
 
       if (action === "delete") {
@@ -297,7 +303,7 @@ export default Plugin.define({
         if (edited === undefined || edited.trim() === "") return
         await run(store.update({ ...wait, prompt: edited.trim() }))
         return void ctx.ui.toast.show({
-          title: "Waits",
+          title: "Schedules",
           variant: "success",
           message: `Updated ${wait.id}.`,
         })
@@ -320,7 +326,7 @@ export default Plugin.define({
       const at = Date.now() + Duration.toMillis(parsed.duration)
       await run(store.update({ ...wait, duration: parsed.duration, firesAt: at, attempts: 0 }))
       ctx.ui.toast.show({
-        title: "Waits",
+        title: "Schedules",
         variant: "success",
         message: `${wait.id} now fires in ${Duration.format(parsed.duration)}.`,
       })
@@ -339,7 +345,7 @@ export default Plugin.define({
       if (target === "all") {
         for (const wait of mine) await run(store.remove(wait.id))
         return void ctx.ui.toast.show({
-          title: "Waits",
+          title: "Schedules",
           message: mine.length === 0 ? "No pending waits to cancel." : `Cancelled ${mine.length}.`,
         })
       }
@@ -353,7 +359,11 @@ export default Plugin.define({
         )
       }
       await run(store.remove(found.id))
-      ctx.ui.toast.show({ title: "Waits", variant: "success", message: `Cancelled ${found.id}.` })
+      ctx.ui.toast.show({
+        title: "Schedules",
+        variant: "success",
+        message: `Cancelled ${found.id}.`,
+      })
     }
 
     // Mirrors the pending waits into host-owned reactive state. `storage.memory`
@@ -386,7 +396,7 @@ export default Plugin.define({
       render: () =>
         Waits({
           get title() {
-            return `Waits (${mirror.rows.length})`
+            return `Schedules (${mirror.rows.length})`
           },
           get rows() {
             return mirror.rows
@@ -419,36 +429,36 @@ export default Plugin.define({
           commands: [
             {
               id: "waits.manager.down",
-              title: "Next wait",
-              group: "Waits",
+              title: "Next scheduled prompt",
+              group: "Schedules",
               bind: "down",
               run: () => move(1),
             },
             {
               id: "waits.manager.up",
-              title: "Previous wait",
-              group: "Waits",
+              title: "Previous scheduled prompt",
+              group: "Schedules",
               bind: "up",
               run: () => move(-1),
             },
             {
               id: "waits.manager.add",
               title: "Schedule a new wait",
-              group: "Waits",
+              group: "Schedules",
               bind: "ctrl+a",
               run: () => void quickAdd(),
             },
             {
               id: "waits.manager.delete",
               title: "Delete the highlighted wait",
-              group: "Waits",
+              group: "Schedules",
               bind: "ctrl+d",
               run: () => void quickDelete(),
             },
             {
               id: "waits.manager.edit",
               title: "Edit the highlighted wait",
-              group: "Waits",
+              group: "Schedules",
               bind: "ctrl+e",
               run: () => void quickEdit(),
             },
@@ -464,30 +474,30 @@ export default Plugin.define({
           commands: [
             {
               id: "waits.schedule",
-              title: "Schedule a wait",
+              title: "Schedule a prompt",
               description: "Send a prompt to this session after a delay, e.g. /wait 1hour do it",
-              group: "Waits",
+              group: "Schedules",
               palette: true,
-              slash: { name: "wait", arguments: true },
+              slash: { name: "schedule", aliases: ["wait"], arguments: true },
               run: (input) => void schedule(input),
             },
             {
               id: "waits.list",
               title: "View waits",
               description: "Browse pending scheduled prompts and cancel one",
-              group: "Waits",
+              group: "Schedules",
               palette: true,
-              slash: { name: "wait-list", aliases: ["waits"] },
+              slash: { name: "schedule-list", aliases: ["wait-list", "waits"] },
               run: () => void list(),
             },
             {
               id: "waits.cancel",
               title: "Cancel a wait",
               description: "Cancel a scheduled prompt by id, or all of them",
-              group: "Waits",
+              group: "Schedules",
               // Deliberately not in the palette: it needs an id, and the
               // palette cannot supply one. View waits offers Delete instead.
-              slash: { name: "wait-cancel", arguments: true },
+              slash: { name: "schedule-cancel", aliases: ["wait-cancel"], arguments: true },
               run: (input) => void cancel(input),
             },
           ],

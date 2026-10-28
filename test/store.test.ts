@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test"
 import { Session } from "@opencode/schema/session"
 import { Duration, Effect } from "effect"
-import type { Wait } from "../src/domain.ts"
-import * as Store from "../src/store.ts"
+import type { Wait } from "../src/shared/domain.ts"
+import * as Store from "../src/shared/store.ts"
 
 const root = "/waits"
 
 /** An `ENOENT`-shaped error, matching what `node:fs/promises` throws for a
  * missing path, so the fake behaves like the real filesystem the plugin
- * ships against (see `src/node.ts`). */
+ * ships against (see `src/shared/node.ts`). */
 const enoent = (path: string): NodeJS.ErrnoException =>
   Object.assign(new Error(`ENOENT: no such file or directory, '${path}'`), { code: "ENOENT" })
 
@@ -16,7 +16,7 @@ const eexist = (path: string): NodeJS.ErrnoException =>
   Object.assign(new Error(`EEXIST: file already exists, open '${path}'`), { code: "EEXIST" })
 
 /** An in-memory `Store.FileSystem` fake over a `Map<string, string>`, honouring
- * the same contract as `src/node.ts`: `writeNew` is an exclusive create,
+ * the same contract as `src/shared/node.ts`: `writeNew` is an exclusive create,
  * `claim` is an idempotent unlink that never rejects for a missing file, and
  * `remove` rejects when the file is already gone (like a bare `rm`). */
 const makeMemoryFileSystem = (
