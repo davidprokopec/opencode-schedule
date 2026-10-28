@@ -1,9 +1,9 @@
 import type { Plugin } from "@opencode/plugin/effect"
 import type { Session } from "@opencode/schema/session"
 import { Effect, Option, type Scope } from "effect"
-import type { Wait } from "./domain.ts"
-import * as WaitDuration from "./duration.ts"
-import { type WaitRow, WaitsRpc } from "./rpc.ts"
+import type { Wait } from "../shared/domain.ts"
+import * as WaitDuration from "../shared/duration.ts"
+import { type WaitRow, WaitsRpc } from "../shared/rpc.ts"
 import type { Interface as Scheduler, SessionProbe } from "./supervisor.ts"
 
 /** A declared `schedule` error, mirroring `WaitsRpc.methods.schedule.errors`. */

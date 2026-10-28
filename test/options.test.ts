@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
-import { defaults, resolve } from "../src/options.ts"
+import { defaults, resolve } from "../src/server/options.ts"
 
 const resolveSync = (input: unknown) => Effect.runSync(resolve(input))
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Duration, Effect, Result } from "effect"
-import { type InvalidDuration, maximum, parse } from "../src/duration.ts"
+import { type InvalidDuration, maximum, parse } from "../src/shared/duration.ts"
 
 /** Runs `parse` and returns the millisecond value of a successful parse. */
 const millisOf = (input: string): number => {

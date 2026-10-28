@@ -39,7 +39,7 @@ export const resolve = (input: unknown): Effect.Effect<Resolved> =>
     const decoded = decodeOption(input ?? {})
     if (Option.isNone(decoded)) {
       yield* Effect.logWarning(
-        "opencode-waits: ignoring invalid plugin options, using defaults",
+        "opencode-schedule: ignoring invalid plugin options, using defaults",
         input,
       )
       return { delivery: defaults.delivery }

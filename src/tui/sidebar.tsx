@@ -13,7 +13,7 @@ const muted = "#565f89"
 const normal = "#c0caf5"
 
 /**
- * The pending waits, rendered into the session sidebar.
+ * The scheduled prompts, rendered into the session sidebar.
  *
  * Nothing here imports `solid-js`. The plugin would resolve its own copy,
  * which need not be the same instance the TUI runs, and a mismatched instance

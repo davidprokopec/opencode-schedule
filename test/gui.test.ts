@@ -6,7 +6,7 @@ import {
   errorMessage,
   parseWaitArguments,
   remaining,
-} from "../src/gui-utils.ts"
+} from "../src/gui/utils.ts"
 
 // Bun shares one module cache across test files. `@opencode/plugin/gui` pulls
 // in solid-js, and without OpenTUI's plugin Bun resolves its server build,
@@ -14,7 +14,7 @@ import {
 // plugin those tests use before loading the GUI SDK (see sidebar.test.ts).
 ensureSolidTransformPlugin()
 const { Command } = await import("@opencode/plugin/gui")
-const { registerWaitCommands } = await import("../src/gui-commands.ts")
+const { registerWaitCommands } = await import("../src/gui/commands.ts")
 
 function commandHarness() {
   const commands = new Map<string, GuiCommand>()
@@ -164,16 +164,42 @@ describe("GUI wait helpers", () => {
 
   test("registers actual local palette/slash commands without submitting a session prompt", async () => {
     const harness = commandHarness()
-    expect([...harness.commands.keys()].sort()).toEqual(["cancel", "list", "open", "wait"])
-    expect(harness.commands.get("wait")?.slash).toEqual({ name: "wait", arguments: true })
-    expect(harness.commands.get("cancel")?.slash).toEqual({ name: "wait-cancel", arguments: true })
-    expect(harness.commands.get("list")?.slash).toEqual({ name: "wait-list", arguments: true })
+    expect([...harness.commands.keys()].sort()).toEqual([
+      "cancel",
+      "legacy-wait",
+      "legacy-wait-cancel",
+      "legacy-wait-list",
+      "list",
+      "open",
+      "wait",
+    ])
+    expect(harness.commands.get("wait")?.slash).toEqual({ name: "schedule", arguments: true })
+    expect(harness.commands.get("cancel")?.slash).toEqual({
+      name: "schedule-cancel",
+      arguments: true,
+    })
+    expect(harness.commands.get("list")?.slash).toEqual({ name: "schedule-list", arguments: true })
+    expect(harness.commands.get("legacy-wait")?.slash).toEqual({ name: "wait", arguments: true })
+    expect(harness.commands.get("legacy-wait-list")?.slash).toEqual({
+      name: "wait-list",
+      arguments: true,
+    })
+    expect(harness.commands.get("legacy-wait-cancel")?.slash).toEqual({
+      name: "wait-cancel",
+      arguments: true,
+    })
 
     harness.setSession("ses-current")
     await harness.commands.get("wait")?.run("2hours  send the summary back")
     expect(harness.calls).toEqual(["schedule:ses-current:2hours:send the summary back"])
     expect(harness.prompts).toEqual([])
-    expect(harness.notices.at(-1)?.title).toBe("Wait scheduled")
+    expect(harness.notices.at(-1)?.title).toBe("Prompt scheduled")
+    await harness.commands.get("legacy-wait")?.run("2hours  send the summary back")
+    expect(harness.calls.at(-1)).toBe("schedule:ses-current:2hours:send the summary back")
+    await harness.commands.get("legacy-wait-list")?.run()
+    expect(harness.opened.at(-1)).toBe("opencode2-waits:main")
+    await harness.commands.get("legacy-wait-cancel")?.run("w123")
+    expect(harness.calls.at(-1)).toBe("cancel:ses-current:w123")
   })
 
   test("handles invalid and sessionless /wait without making an RPC call", async () => {
@@ -195,18 +221,18 @@ describe("GUI wait helpers", () => {
     await harness.commands.get("cancel")?.run("all")
     expect(harness.calls).toEqual(["cancel:ses-one:w123", "cancelAll:ses-one"])
     expect(harness.notices.map(({ title }) => title)).toEqual([
-      "Wait cancelled.",
-      "2 waits cancelled.",
+      "Scheduled prompt cancelled.",
+      "2 scheduled prompts cancelled.",
     ])
 
     harness.failCancel()
     await harness.commands.get("cancel")?.run("w123")
-    expect(harness.notices.at(-1)?.title).toBe("Could not cancel wait")
+    expect(harness.notices.at(-1)?.title).toBe("Could not cancel scheduled prompt")
     expect(harness.notices.at(-1)?.description).toBe("server rejected cancel")
 
     harness.failSchedule()
     await harness.commands.get("wait")?.run("1m try again")
-    expect(harness.notices.at(-1)?.title).toBe("Could not schedule wait")
+    expect(harness.notices.at(-1)?.title).toBe("Could not schedule prompt")
     expect(harness.notices.at(-1)?.description).toBe("server rejected schedule")
   })
 
@@ -221,7 +247,7 @@ describe("GUI wait helpers", () => {
     await harness.commands.get("wait")?.run("soon do it")
     expect(harness.calls).toEqual(["schedule:ses-typed:soon:do it"])
     expect(harness.notices.at(-1)).toEqual({
-      title: "Could not schedule wait",
+      title: "Could not schedule prompt",
       description: 'Invalid duration "soon": expected a number at "soon"',
       variant: "error",
     })
