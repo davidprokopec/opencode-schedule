@@ -5,16 +5,16 @@ import { join } from "node:path"
 import type { Plugin } from "@opencode/plugin/tui"
 import { ensureSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { Duration, Effect } from "effect"
-import type { Wait } from "../src/domain.ts"
-import * as Node from "../src/node.ts"
-import * as Store from "../src/store.ts"
+import type { Wait } from "../src/shared/domain.ts"
+import * as Node from "../src/shared/node.ts"
+import * as Store from "../src/shared/store.ts"
 
 // See sidebar.test.ts: Solid JSX needs OpenTUI's transform, registered before
-// the transformed modules (`tui.ts` pulls in `sidebar.tsx`) are loaded.
+// the transformed modules (`tui/index.ts` pulls in `tui/sidebar.tsx`) are loaded.
 ensureSolidTransformPlugin()
 const { testRender } = await import("@opentui/solid")
 const { createStore, produce } = await import("solid-js/store")
-const { default: plugin } = await import("../src/tui.ts")
+const { default: plugin } = await import("../src/tui/index.ts")
 
 type Context = Plugin.Context
 type Mounted = Awaited<ReturnType<typeof testRender>>
@@ -194,7 +194,7 @@ describe("Waits sidebar plugin", () => {
     const setup = await activate(makeHost("ses_a"))
     const frame = setup.captureCharFrame()
 
-    expect(frame).toContain("▾ Waits (2)")
+    expect(frame).toContain("▾ Schedules (2)")
     expect(frame).toContain("w1 implement this")
     expect(frame).toContain("w2 someone else's")
   })
@@ -202,35 +202,35 @@ describe("Waits sidebar plugin", () => {
   test("is expanded with an empty header when there are no waits", async () => {
     const setup = await activate(makeHost("ses_a"))
 
-    expect(setup.captureCharFrame()).toContain("▾ Waits (0)")
+    expect(setup.captureCharFrame()).toContain("▾ Schedules (0)")
   })
 
   test("collapses on a header click and re-expands on the next", async () => {
     await schedule({ session: "ses_a", prompt: "implement this", inMs: 3_600_000 })
     const setup = await activate(makeHost("ses_a"))
-    const header = rowOf(setup.captureCharFrame(), "Waits (1)")
+    const header = rowOf(setup.captureCharFrame(), "Schedules (1)")
 
     await setup.mockMouse.click(3, header)
     await setup.renderOnce()
     let frame = setup.captureCharFrame()
-    expect(frame).toContain("▸ Waits (1)")
+    expect(frame).toContain("▸ Schedules (1)")
     expect(frame).not.toContain("w1")
 
     await setup.mockMouse.click(3, header)
     await setup.renderOnce()
     frame = setup.captureCharFrame()
-    expect(frame).toContain("▾ Waits (1)")
+    expect(frame).toContain("▾ Schedules (1)")
     expect(frame).toContain("w1 implement this")
   })
 
   test("a wait scheduled after activation appears on the next refresh, expanded or collapsed", async () => {
     const setup = await activate(makeHost("ses_a"))
-    const header = rowOf(setup.captureCharFrame(), "Waits (0)")
+    const header = rowOf(setup.captureCharFrame(), "Schedules (0)")
 
     await schedule({ session: "ses_a", prompt: "arrived late", inMs: 60_000 })
     await refresh(setup)
     expect(setup.captureCharFrame()).toContain("w1 arrived late")
-    expect(setup.captureCharFrame()).toContain("Waits (1)")
+    expect(setup.captureCharFrame()).toContain("Schedules (1)")
     expect(slotRenderCounts.get(setup)?.()).toBe(1)
 
     await setup.mockMouse.click(3, header)
@@ -238,7 +238,7 @@ describe("Waits sidebar plugin", () => {
     await schedule({ session: "ses_a", prompt: "while collapsed", inMs: 60_000 })
     await refresh(setup)
     let frame = setup.captureCharFrame()
-    expect(frame).toContain("▸ Waits (2)")
+    expect(frame).toContain("▸ Schedules (2)")
     expect(frame).not.toContain("while collapsed")
     expect(slotRenderCounts.get(setup)?.()).toBe(1)
 
@@ -247,7 +247,7 @@ describe("Waits sidebar plugin", () => {
     await setup.mockMouse.click(3, header)
     await setup.renderOnce()
     frame = setup.captureCharFrame()
-    expect(frame).toContain("▾ Waits (2)")
+    expect(frame).toContain("▾ Schedules (2)")
     expect(frame).toContain("w1 arrived late")
     expect(frame).toContain("w2 while collapsed")
   })
@@ -262,7 +262,7 @@ describe("Waits sidebar plugin", () => {
     await refresh(setup)
 
     const frame = setup.captureCharFrame()
-    expect(frame).toContain("Waits (1)")
+    expect(frame).toContain("Schedules (1)")
     expect(frame).toContain("w1 first")
     expect(frame).not.toContain("w2")
   })
@@ -332,7 +332,7 @@ describe("Waits sidebar plugin", () => {
 
     await refresh(setup)
     const frame = setup.captureCharFrame()
-    expect(frame).toContain("Waits (1)")
+    expect(frame).toContain("Schedules (1)")
     expect(frame).not.toContain("w2")
   })
 
@@ -354,7 +354,7 @@ describe("Waits sidebar plugin", () => {
     await schedule({ session: "ses_a", prompt: "first", inMs: 60_000 })
     const host = makeHost("ses_a")
     const setup = await activate(host)
-    const header = rowOf(setup.captureCharFrame(), "Waits (1)")
+    const header = rowOf(setup.captureCharFrame(), "Schedules (1)")
 
     await setup.mockMouse.click(3, header)
     await setup.renderOnce()
@@ -371,7 +371,7 @@ describe("Waits sidebar plugin", () => {
     const host = makeHost("ses_a")
     const setup = await activate(host)
     const frame = setup.captureCharFrame()
-    const header = rowOf(frame, "Waits (1)")
+    const header = rowOf(frame, "Schedules (1)")
     const row = rowOf(frame, "w1")
 
     await setup.mockMouse.click(3, header)
@@ -387,7 +387,7 @@ describe("Waits sidebar plugin", () => {
     const host = makeHost("ses_a")
     const setup = await activate(host)
 
-    await setup.mockMouse.click(3, rowOf(setup.captureCharFrame(), "Waits (1)"))
+    await setup.mockMouse.click(3, rowOf(setup.captureCharFrame(), "Schedules (1)"))
     await Bun.sleep(25)
 
     expect(host.selects).toEqual([])

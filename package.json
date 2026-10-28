@@ -1,21 +1,21 @@
 {
-  "name": "opencode-waits",
-  "version": "0.4.0",
-  "description": "OpenCode V2 plugin that defers a prompt: /wait 1hour implement this",
+  "name": "opencode-schedule",
+  "version": "0.5.0",
+  "description": "Schedule a prompt in OpenCode: /schedule 1hour implement this",
   "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/davidprokopec/opencode-waits.git"
+    "url": "git+https://github.com/davidprokopec/opencode-schedule.git"
   },
-  "homepage": "https://github.com/davidprokopec/opencode-waits#readme",
-  "bugs": "https://github.com/davidprokopec/opencode-waits/issues",
+  "homepage": "https://github.com/davidprokopec/opencode-schedule#readme",
+  "bugs": "https://github.com/davidprokopec/opencode-schedule/issues",
   "exports": {
-    ".": "./src/index.ts",
-    "./server": "./src/index.ts",
-    "./tui": "./src/tui.ts",
+    ".": "./src/server/index.ts",
+    "./server": "./src/server/index.ts",
+    "./tui": "./src/tui/index.ts",
     "./gui-experimental": "./dist/gui-experimental.cjs",
-    "./rpc": "./src/rpc.ts"
+    "./rpc": "./src/shared/rpc.ts"
   },
   "files": [
     "src",

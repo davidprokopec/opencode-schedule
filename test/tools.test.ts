@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test"
 import { Session } from "@opencode/schema/session"
 import { Tool } from "@opencode/schema/tool"
 import { Cause, Duration, Effect, Exit, Option } from "effect"
-import type { Wait } from "../src/domain.ts"
-import type { ScheduleInput, Interface as Scheduler } from "../src/supervisor.ts"
-import * as Tools from "../src/tools.ts"
+import type { ScheduleInput, Interface as Scheduler } from "../src/server/supervisor.ts"
+import * as Tools from "../src/server/tools.ts"
+import type { Wait } from "../src/shared/domain.ts"
 
 /** Builds a `Wait` with sensible defaults, overridable per test. */
 const makeWait = (overrides: Partial<Wait> = {}): Wait => ({
@@ -168,10 +168,10 @@ describe("Tools.all", () => {
   })
 })
 
-describe("wait_schedule", () => {
+describe("schedule_create", () => {
   test("rejects an empty prompt without calling scheduler.schedule", async () => {
     const { scheduler, calls } = stubScheduler()
-    const tool = findTool(Tools.all(scheduler), "wait_schedule")
+    const tool = findTool(Tools.all(scheduler), "schedule_create")
     const context = fakeContext()
 
     const error = await runExpectingToolError(
@@ -187,7 +187,7 @@ describe("wait_schedule", () => {
 
   test("rejects a whitespace-only prompt without calling scheduler.schedule", async () => {
     const { scheduler, calls } = stubScheduler()
-    const tool = findTool(Tools.all(scheduler), "wait_schedule")
+    const tool = findTool(Tools.all(scheduler), "schedule_create")
     const context = fakeContext()
 
     const error = await runExpectingToolError(
@@ -203,7 +203,7 @@ describe("wait_schedule", () => {
 
   test("rejects an unparseable duration, mentioning the bad input, without scheduling", async () => {
     const { scheduler, calls } = stubScheduler()
-    const tool = findTool(Tools.all(scheduler), "wait_schedule")
+    const tool = findTool(Tools.all(scheduler), "schedule_create")
     const context = fakeContext()
 
     const error = await runExpectingToolError(
@@ -220,7 +220,7 @@ describe("wait_schedule", () => {
   test("passes the parsed duration and sessionID through, trims the prompt, and reports the wait id", async () => {
     const wait = makeWait({ id: "w42" })
     const { scheduler, calls } = stubScheduler({ schedule: () => wait })
-    const tool = findTool(Tools.all(scheduler), "wait_schedule")
+    const tool = findTool(Tools.all(scheduler), "schedule_create")
     const context = fakeContext({ sessionID: wait.sessionID })
 
     const result = await Effect.runPromise(
@@ -241,24 +241,24 @@ describe("wait_schedule", () => {
   })
 })
 
-describe("wait_list", () => {
+describe("schedule_list", () => {
   test("reports no pending waits when the scheduler returns none", async () => {
     const { scheduler } = stubScheduler({ list: () => [] })
-    const tool = findTool(Tools.all(scheduler), "wait_list")
+    const tool = findTool(Tools.all(scheduler), "schedule_list")
     const context = fakeContext()
 
     const result = await Effect.runPromise(
       tool.execute({}, context) as Effect.Effect<Tool.Result, Tool.Error>,
     )
 
-    expect(contentText(result).toLowerCase()).toContain("no pending waits")
+    expect(contentText(result).toLowerCase()).toContain("no pending scheduled prompts")
   })
 
   test("lists each pending wait's id and prompt", async () => {
     const first = makeWait({ id: "w1", prompt: "first prompt" })
     const second = makeWait({ id: "w2", prompt: "second prompt" })
     const { scheduler } = stubScheduler({ list: () => [first, second] })
-    const tool = findTool(Tools.all(scheduler), "wait_list")
+    const tool = findTool(Tools.all(scheduler), "schedule_list")
     const context = fakeContext()
 
     const result = await Effect.runPromise(
@@ -273,7 +273,7 @@ describe("wait_list", () => {
   })
 })
 
-describe("wait_cancel", () => {
+describe("schedule_cancel", () => {
   describe("missing id regression guard", () => {
     // `Schema.optional` renders as `anyOf: [string, null]`, so a provider may
     // legitimately send `{ id: null }` rather than omitting the field. The
@@ -288,7 +288,7 @@ describe("wait_cancel", () => {
     ] as const) {
       test(`{ id } ${label} fails with a Tool.Error, not a defect`, async () => {
         const { scheduler, calls } = stubScheduler({ list: () => [pending] })
-        const tool = findTool(Tools.all(scheduler), "wait_cancel")
+        const tool = findTool(Tools.all(scheduler), "schedule_cancel")
         const context = fakeContext()
 
         const error = await runExpectingToolError(
@@ -307,7 +307,7 @@ describe("wait_cancel", () => {
     const first = makeWait({ id: "w1", prompt: "first" })
     const second = makeWait({ id: "w2", prompt: "second" })
     const { scheduler, calls } = stubScheduler({ cancelAll: () => [first, second] })
-    const tool = findTool(Tools.all(scheduler), "wait_cancel")
+    const tool = findTool(Tools.all(scheduler), "schedule_cancel")
     const context = fakeContext()
 
     const result = await Effect.runPromise(
@@ -323,14 +323,14 @@ describe("wait_cancel", () => {
 
   test("{ all: true } reports nothing to cancel when cancelAll returns none", async () => {
     const { scheduler } = stubScheduler({ cancelAll: () => [] })
-    const tool = findTool(Tools.all(scheduler), "wait_cancel")
+    const tool = findTool(Tools.all(scheduler), "schedule_cancel")
     const context = fakeContext()
 
     const result = await Effect.runPromise(
       tool.execute({ all: true }, context) as Effect.Effect<Tool.Result, Tool.Error>,
     )
 
-    expect(contentText(result).toLowerCase()).toContain("no pending waits")
+    expect(contentText(result).toLowerCase()).toContain("no pending scheduled prompts")
   })
 
   test("a known id calls cancel and reports success", async () => {
@@ -338,7 +338,7 @@ describe("wait_cancel", () => {
     const { scheduler, calls } = stubScheduler({
       cancel: (_sessionID, id) => (id === wait.id ? Option.some(wait) : Option.none()),
     })
-    const tool = findTool(Tools.all(scheduler), "wait_cancel")
+    const tool = findTool(Tools.all(scheduler), "schedule_cancel")
     const context = fakeContext()
 
     const result = await Effect.runPromise(
@@ -353,7 +353,7 @@ describe("wait_cancel", () => {
 
   test("an unknown id fails with a Tool.Error", async () => {
     const { scheduler, calls } = stubScheduler({ cancel: () => Option.none(), list: () => [] })
-    const tool = findTool(Tools.all(scheduler), "wait_cancel")
+    const tool = findTool(Tools.all(scheduler), "schedule_cancel")
     const context = fakeContext()
 
     const error = await runExpectingToolError(
@@ -362,5 +362,119 @@ describe("wait_cancel", () => {
 
     expect(calls.cancel).toEqual([{ sessionID: context.sessionID, id: "w999" }])
     expect(error.message).toContain("w999")
+  })
+})
+
+describe("tool naming", () => {
+  const pairs = [
+    ["schedule_create", "wait_schedule"],
+    ["schedule_list", "wait_list"],
+    ["schedule_cancel", "wait_cancel"],
+  ] as const
+
+  test("registers canonical tools and wait_* aliases, with no duplicate names", () => {
+    const { scheduler } = stubScheduler()
+    const names = Tools.all(scheduler).map((tool) => tool.name)
+
+    expect(new Set(names).size).toBe(names.length)
+    expect(names).toEqual([
+      "schedule_create",
+      "schedule_list",
+      "schedule_cancel",
+      "wait_schedule",
+      "wait_list",
+      "wait_cancel",
+    ])
+  })
+
+  for (const [canonical, legacy] of pairs) {
+    test(`${legacy} keeps ${canonical}'s input schema and options and points at it`, () => {
+      const { scheduler } = stubScheduler()
+      const tools = Tools.all(scheduler)
+      const current = findTool(tools, canonical)
+      const alias = findTool(tools, legacy)
+
+      expect(JSON.stringify(alias.input)).toBe(JSON.stringify(current.input))
+      expect(alias.options).toEqual(current.options)
+      expect(alias.description).toContain(canonical)
+      expect(current.description).not.toContain("wait_")
+    })
+  }
+
+  test("wait_schedule schedules exactly like schedule_create", async () => {
+    const { scheduler, calls } = stubScheduler()
+    const tools = Tools.all(scheduler)
+    const context = fakeContext()
+    const results: Array<string> = []
+
+    for (const name of ["schedule_create", "wait_schedule"]) {
+      const result = await Effect.runPromise(
+        findTool(tools, name).execute(
+          { duration: "1hour", prompt: " go " },
+          context,
+        ) as Effect.Effect<Tool.Result, Tool.Error>,
+      )
+      results.push(contentText(result))
+    }
+
+    expect(calls.schedule).toHaveLength(2)
+    expect(calls.schedule[1]).toEqual(calls.schedule[0])
+    expect(calls.schedule[0]?.prompt).toBe("go")
+    expect(results[1]).toBe(results[0])
+  })
+
+  test("wait_list and wait_cancel act on the invoking session like their canonical tools", async () => {
+    const wait = makeWait({ id: "w3", prompt: "later" })
+    const { scheduler, calls } = stubScheduler({
+      list: () => [wait],
+      cancel: (_sessionID, id) => (id === wait.id ? Option.some(wait) : Option.none()),
+      cancelAll: () => [wait],
+    })
+    const tools = Tools.all(scheduler)
+    const context = fakeContext()
+    const run = (name: string, input: unknown) =>
+      Effect.runPromise(
+        findTool(tools, name).execute(input, context) as Effect.Effect<Tool.Result, Tool.Error>,
+      ).then(contentText)
+
+    expect(await run("wait_list", {})).toBe(await run("schedule_list", {}))
+    expect(await run("wait_cancel", { id: "w3" })).toBe(await run("schedule_cancel", { id: "w3" }))
+    expect(await run("wait_cancel", { all: true })).toBe(
+      await run("schedule_cancel", { all: true }),
+    )
+    expect(calls.list).toEqual([context.sessionID, context.sessionID])
+    expect(calls.cancel).toEqual([
+      { sessionID: context.sessionID, id: "w3" },
+      { sessionID: context.sessionID, id: "w3" },
+    ])
+    expect(calls.cancelAll).toEqual([context.sessionID, context.sessionID])
+  })
+})
+
+describe("schedule_create confirmation", () => {
+  const confirm = async (id: string) => {
+    const { scheduler } = stubScheduler({ schedule: () => makeWait({ id }) })
+    const result = await Effect.runPromise(
+      findTool(Tools.all(scheduler), "schedule_create").execute(
+        { duration: "5m", prompt: "go" },
+        fakeContext(),
+      ) as Effect.Effect<Tool.Result, Tool.Error>,
+    )
+    return contentText(result)
+  }
+
+  test("points at /schedule-cancel and says a persisted schedule survives a restart", async () => {
+    const content = await confirm("w5")
+
+    expect(content).toContain("/schedule-cancel w5")
+    expect(content).toContain("survives an OpenCode restart")
+    expect(content).not.toContain("lost")
+  })
+
+  test("warns only an unpersisted in-memory fallback is lost on restart", async () => {
+    const content = await confirm("mem-123")
+
+    expect(content).toContain("/schedule-cancel mem-123")
+    expect(content).toContain("lost if OpenCode restarts")
   })
 })

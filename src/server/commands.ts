@@ -15,52 +15,83 @@ export interface Definition {
  * these submits its template as a prompt, so it costs one model turn: the
  * template's only job is to make the agent call the matching tool once, with
  * the argument text passed straight through. In the TUI the client-side slash
- * commands intercept /wait before submission, so these never fire there.
+ * commands intercept /schedule before submission, so these never fire there.
+ *
+ * Every template calls the canonical `schedule_*` tools, whether it is
+ * reached through a canonical name or a legacy `/wait*` alias.
  */
-export const definitions: ReadonlyArray<Definition> = [
+const scheduleTemplate = [
+  "The user wants a prompt delivered later, not now.",
+  "",
+  "Call the `schedule_create` tool exactly once with:",
+  "",
+  "- `duration`: $1",
+  "- `prompt`: the text between the OPENCODE_WAIT_PROMPT markers below, copied verbatim,",
+  "  without the marker lines",
+  "",
+  "OPENCODE_WAIT_PROMPT",
+  "$2",
+  "OPENCODE_WAIT_PROMPT",
+  "",
+  "Do not start the requested work, do not read any files, and do not call any other tool.",
+  "After `schedule_create` returns, reply with one short line repeating what it reported.",
+].join("\n")
+
+const listTemplate = [
+  "Call the `schedule_list` tool exactly once and do not call any other tool.",
+  "Reply with its output and nothing else.",
+].join("\n")
+
+const cancelTemplate = [
+  "Call the `schedule_cancel` tool exactly once and do not call any other tool.",
+  "",
+  "The user wrote: $ARGUMENTS",
+  "",
+  "If that text is `all`, call the tool with `all` set to true.",
+  "Otherwise call the tool with `id` set to that text exactly.",
+  "If the text is empty, call the tool with no arguments.",
+  "Reply with the tool's output and nothing else.",
+].join("\n")
+
+export const canonical: ReadonlyArray<Definition> = [
+  {
+    name: "schedule",
+    description: "Send a prompt to this session after a delay, e.g. /schedule 1hour do it",
+    template: scheduleTemplate,
+  },
+  {
+    name: "schedule-list",
+    description: "Browse scheduled prompts and cancel one",
+    template: listTemplate,
+  },
+  {
+    name: "schedule-cancel",
+    description: "Cancel a scheduled prompt by id, or all of them",
+    template: cancelTemplate,
+  },
+]
+
+/** Pre-rename names, kept so existing habits and docs keep working. They
+ * render exactly the same templates as their canonical counterparts. */
+export const legacy: ReadonlyArray<Definition> = [
   {
     name: "wait",
-    description: "Send a prompt to this session after a delay, e.g. /wait 1hour do it",
-    template: [
-      "The user wants a prompt delivered later, not now.",
-      "",
-      "Call the `wait_schedule` tool exactly once with:",
-      "",
-      "- `duration`: $1",
-      "- `prompt`: the text between the OPENCODE_WAIT_PROMPT markers below, copied verbatim,",
-      "  without the marker lines",
-      "",
-      "OPENCODE_WAIT_PROMPT",
-      "$2",
-      "OPENCODE_WAIT_PROMPT",
-      "",
-      "Do not start the requested work, do not read any files, and do not call any other tool.",
-      "After `wait_schedule` returns, reply with one short line repeating what it reported.",
-    ].join("\n"),
+    description: "Alias of /schedule: send a prompt after a delay, e.g. /wait 1hour do it",
+    template: scheduleTemplate,
   },
   {
     name: "wait-list",
-    description: "Browse pending scheduled prompts and cancel one",
-    template: [
-      "Call the `wait_list` tool exactly once and do not call any other tool.",
-      "Reply with its output and nothing else.",
-    ].join("\n"),
+    description: "Alias of /schedule-list: browse scheduled prompts",
+    template: listTemplate,
   },
   {
     name: "wait-cancel",
-    description: "Cancel a scheduled prompt by id, or all of them",
-    template: [
-      "Call the `wait_cancel` tool exactly once and do not call any other tool.",
-      "",
-      "The user wrote: $ARGUMENTS",
-      "",
-      "If that text is `all`, call the tool with `all` set to true.",
-      "Otherwise call the tool with `id` set to that text exactly.",
-      "If the text is empty, call the tool with no arguments.",
-      "Reply with the tool's output and nothing else.",
-    ].join("\n"),
+    description: "Alias of /schedule-cancel: cancel a scheduled prompt by id, or all",
+    template: cancelTemplate,
   },
 ]
+
+export const definitions: ReadonlyArray<Definition> = [...canonical, ...legacy]
 
 /**
  * The slice of the OpenCode session API a command needs to submit its
@@ -106,7 +137,7 @@ const arity = (template: string): number => {
 }
 
 /** Splits on whitespace until one placeholder is left, which takes everything
- * that remains: `/wait 1hour do the thing` gives `$1` the duration and `$2`
+ * that remains: `/schedule 1hour do the thing` gives `$1` the duration and `$2`
  * the whole prompt, spaces included. */
 const positional = (args: string, count: number): ReadonlyArray<string> => {
   const parts: Array<string> = []

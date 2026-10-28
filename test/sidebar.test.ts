@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { ensureSolidTransformPlugin } from "@opentui/solid/bun-plugin"
-import type { Row } from "../src/sidebar.tsx"
+import type { Row } from "../src/tui/sidebar.tsx"
 
 // Bun does not compile Solid JSX on its own. Without OpenTUI's transform,
 // `sidebar.tsx` would evaluate its JSX expressions once and never react to a
@@ -10,7 +10,7 @@ import type { Row } from "../src/sidebar.tsx"
 ensureSolidTransformPlugin()
 const { testRender } = await import("@opentui/solid")
 const { createStore } = await import("solid-js/store")
-const { Waits } = await import("../src/sidebar.tsx")
+const { Waits } = await import("../src/tui/sidebar.tsx")
 
 const rows: ReadonlyArray<Row> = [
   { id: "w1", prompt: "implement this", countdown: "1h", mine: true },
@@ -45,27 +45,33 @@ const rowOf = (frame: string, text: string): number => {
 describe("Waits sidebar", () => {
   test("renders every row beneath an expanded header", async () => {
     const setup = await mount(() =>
-      Waits({ title: "Waits (2)", rows, expanded: true, onOpen: () => {}, onToggle: () => {} }),
+      Waits({ title: "Schedules (2)", rows, expanded: true, onOpen: () => {}, onToggle: () => {} }),
     )
     const frame = setup.captureCharFrame()
 
-    expect(frame).toContain("▾ Waits (2)")
+    expect(frame).toContain("▾ Schedules (2)")
     expect(frame).toContain("w1 implement this")
     expect(frame).toContain("1h")
     expect(frame).toContain("w2 other session")
     expect(frame).toContain("2m 5s")
     // Header first, then the rows in order.
-    expect(rowOf(frame, "Waits (2)")).toBeLessThan(rowOf(frame, "w1"))
+    expect(rowOf(frame, "Schedules (2)")).toBeLessThan(rowOf(frame, "w1"))
     expect(rowOf(frame, "w1")).toBeLessThan(rowOf(frame, "w2"))
   })
 
   test("hides the rows and shows a right caret when collapsed", async () => {
     const setup = await mount(() =>
-      Waits({ title: "Waits (2)", rows, expanded: false, onOpen: () => {}, onToggle: () => {} }),
+      Waits({
+        title: "Schedules (2)",
+        rows,
+        expanded: false,
+        onOpen: () => {},
+        onToggle: () => {},
+      }),
     )
     const frame = setup.captureCharFrame()
 
-    expect(frame).toContain("▸ Waits (2)")
+    expect(frame).toContain("▸ Schedules (2)")
     expect(frame).not.toContain("▾")
     expect(frame).not.toContain("w1")
     expect(frame).not.toContain("w2")
@@ -73,10 +79,16 @@ describe("Waits sidebar", () => {
 
   test("renders only the header when there are no waits", async () => {
     const setup = await mount(() =>
-      Waits({ title: "Waits (0)", rows: [], expanded: true, onOpen: () => {}, onToggle: () => {} }),
+      Waits({
+        title: "Schedules (0)",
+        rows: [],
+        expanded: true,
+        onOpen: () => {},
+        onToggle: () => {},
+      }),
     )
 
-    expect(setup.captureCharFrame()).toContain("▾ Waits (0)")
+    expect(setup.captureCharFrame()).toContain("▾ Schedules (0)")
   })
 
   test("clicking the header toggles, and never opens a row", async () => {
@@ -84,14 +96,14 @@ describe("Waits sidebar", () => {
     const opened: string[] = []
     const setup = await mount(() =>
       Waits({
-        title: "Waits (2)",
+        title: "Schedules (2)",
         rows,
         expanded: true,
         onOpen: (id) => opened.push(id),
         onToggle: () => toggled.push("toggle"),
       }),
     )
-    const header = rowOf(setup.captureCharFrame(), "Waits (2)")
+    const header = rowOf(setup.captureCharFrame(), "Schedules (2)")
 
     await setup.mockMouse.click(3, header)
 
@@ -104,7 +116,7 @@ describe("Waits sidebar", () => {
     const opened: string[] = []
     const setup = await mount(() =>
       Waits({
-        title: "Waits (2)",
+        title: "Schedules (2)",
         rows,
         expanded: true,
         onOpen: (id) => opened.push(id),
@@ -124,7 +136,7 @@ describe("Waits sidebar", () => {
     const opened: string[] = []
     const setup = await mount(() =>
       Waits({
-        title: "Waits (2)",
+        title: "Schedules (2)",
         rows,
         expanded: true,
         onOpen: (id) => opened.push(id),
@@ -143,7 +155,7 @@ describe("Waits sidebar", () => {
     const opened: string[] = []
     const setup = await mount(() =>
       Waits({
-        title: "Waits (2)",
+        title: "Schedules (2)",
         rows,
         expanded: true,
         onOpen: (id) => opened.push(id),
@@ -163,7 +175,7 @@ describe("Waits sidebar", () => {
     const opened: string[] = []
     const setup = await mount(() =>
       Waits({
-        title: "Waits (2)",
+        title: "Schedules (2)",
         rows,
         expanded: false,
         onOpen: (id) => opened.push(id),
@@ -183,7 +195,7 @@ describe("Waits sidebar", () => {
       Waits({
         // Getters, as Solid compiles reactive props, so each read is tracked.
         get title() {
-          return `Waits (${state.rows.length})`
+          return `Schedules (${state.rows.length})`
         },
         get rows() {
           return state.rows
@@ -195,21 +207,21 @@ describe("Waits sidebar", () => {
         onToggle: () => setState("expanded", (value) => !value),
       }),
     )
-    const header = rowOf(setup.captureCharFrame(), "Waits (2)")
+    const header = rowOf(setup.captureCharFrame(), "Schedules (2)")
 
     expect(setup.captureCharFrame()).toContain("w1 implement this")
 
     await setup.mockMouse.click(3, header)
     await setup.renderOnce()
     const collapsed = setup.captureCharFrame()
-    expect(collapsed).toContain("▸ Waits (2)")
+    expect(collapsed).toContain("▸ Schedules (2)")
     expect(collapsed).not.toContain("w1")
     expect(collapsed).not.toContain("w2")
 
     await setup.mockMouse.click(3, header)
     await setup.renderOnce()
     const expanded = setup.captureCharFrame()
-    expect(expanded).toContain("▾ Waits (2)")
+    expect(expanded).toContain("▾ Schedules (2)")
     expect(expanded).toContain("w1 implement this")
     expect(expanded).toContain("w2 other session")
   })
@@ -223,7 +235,7 @@ describe("Waits sidebar", () => {
       Waits({
         // Getters, as Solid compiles reactive props, so each read is tracked.
         get title() {
-          return `Waits (${state.rows.length})`
+          return `Schedules (${state.rows.length})`
         },
         get rows() {
           return state.rows
@@ -251,7 +263,7 @@ describe("Waits sidebar", () => {
     ])
     await setup.renderOnce()
     frame = setup.captureCharFrame()
-    expect(frame).toContain("Waits (2)")
+    expect(frame).toContain("Schedules (2)")
     expect(frame).toContain("w2 added later")
 
     // Collapsed: rows vanish, but the title count still tracks changes.
@@ -260,7 +272,7 @@ describe("Waits sidebar", () => {
     setState("rows", (current) => current.filter((row) => row.id !== "w1"))
     await setup.renderOnce()
     frame = setup.captureCharFrame()
-    expect(frame).toContain("▸ Waits (1)")
+    expect(frame).toContain("▸ Schedules (1)")
     expect(frame).not.toContain("w2")
 
     // Re-expanding shows what changed while it was collapsed, not stale rows.
@@ -274,7 +286,7 @@ describe("Waits sidebar", () => {
   test("a long prompt does not push the countdown off its row", async () => {
     const setup = await mount(() =>
       Waits({
-        title: "Waits (1)",
+        title: "Schedules (1)",
         rows: [{ id: "w9", prompt: "a".repeat(20), countdown: "3h", mine: true }],
         expanded: true,
         onOpen: () => {},
