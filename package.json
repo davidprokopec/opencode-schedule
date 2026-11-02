@@ -1,6 +1,6 @@
 {
   "name": "opencode-schedule",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Schedule a prompt in OpenCode: /schedule 1hour implement this",
   "license": "MIT",
   "type": "module",

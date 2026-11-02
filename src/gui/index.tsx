@@ -293,14 +293,14 @@ export default Plugin.define({
     ctx.add(Slot, {
       at: "session.panel.end",
       render: (input) => (
-        <button
-          type="button"
-          title="Open Schedules"
-          aria-label="Open Schedules"
-          onClick={() => ctx.layout.open(`${ctx.id}:main`, input.session)}
-        >
-          ◷ Schedules
-        </button>
+        <ctx.ui.Tooltip value="Open Schedules">
+          <ctx.ui.IconButton
+            icon="checklist"
+            label="Open Schedules"
+            size="large"
+            onClick={() => ctx.layout.open(`${ctx.id}:main`, input.session)}
+          />
+        </ctx.ui.Tooltip>
       ),
     })
     ctx.add(MenuItem, (): GuiMenuItem => {
@@ -309,7 +309,7 @@ export default Plugin.define({
         menu: "session.panel",
         id: "schedules",
         title: "Schedules",
-        icon: "outline-rotate-clockwise",
+        icon: "checklist",
         order: 45,
         opened: !!session && ctx.layout.state(`${ctx.id}:main`, session) !== "closed",
         run: () => {
