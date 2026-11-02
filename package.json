@@ -44,7 +44,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@opencode/plugin": "2.2.0",
+    "@opencode/plugin": "2.2.4",
     "@opencode/schema": "2.2.0",
     "@opentui/core": "0.7.0",
     "@opentui/solid": "0.7.0",
